@@ -46,6 +46,22 @@ getCell row col m
     | otherwise = (m !! row) !! col
 
 
+type Coordinate = (Int, Int)
+
+nullCoordinate :: Coordinate
+nullCoordinate = (-1, -1)
+
+isNullCoordinate :: Coordinate -> Bool
+isNullCoordinate coord = (fst coord == -1) && (snd coord == -1)
+
+findCellCoordinates :: Int -> Int -> Int -> Matrix -> Coordinate
+findCellCoordinates row col val m
+    | row == length m = error "findCellCoordinates: value does not exist"
+    | col == (length $ head m) = findCellCoordinates (row + 1) 0 val m
+    | (snd currentCell) == val = (row, col)
+    | otherwise = findCellCoordinates row (col + 1) val m
+    where currentCell = getCell row col m
+
 -- Algorithm
 type ScoringData = (Cell, Cell, Cell, Char, Char)
 
@@ -60,8 +76,60 @@ _mapMatrix rows cols seq1 seq2 m
 mapMatrix :: String -> String -> Matrix -> Matrix
 mapMatrix s1 s2 m = _mapMatrix 0 0 s1 s2 m
 
-getResult :: Matrix -> String -> String -> [String]
-getResult m seq1 seq2 = [seq1, seq2]
+getMaxCellInList :: [Cell] -> Cell
+getMaxCellInList list = foldr (\x y -> if ((snd x) > (snd y)) then (x) else (y)) (('_', -100)) list
+
+getMaxScoreCellCoordinates :: [Coordinate] -> Matrix -> Coordinate
+getMaxScoreCellCoordinates res m = 
+    let getMaxScoreCell = getMaxCellInList (map getMaxCellInList m)
+    in findCellCoordinates 0 0 (snd getMaxScoreCell) m
+
+type Bases = (Char, Char)
+type ResultCell = (Cell, Bases)
+
+_getChain :: [ResultCell] -> Int -> Int -> Matrix -> String -> String -> [ResultCell]
+_getChain res row col m seq1 seq2
+    | row < 0 || col < 0 = res
+    | direction == '-' = _getChain ((currentCell, bases):res) row (col - 1) m seq1 seq2
+    | direction == 'd' = _getChain ((currentCell, bases):res) (row - 1) (col - 1) m seq1 seq2
+    | direction == '|' = _getChain ((currentCell, bases):res) (row - 1) col m seq1 seq2
+    | otherwise = error "_getChain: Bad direction"
+    where direction = fst currentCell
+          currentCell = getCell row col m
+          lc = getCell row (col - 1) m
+          dc = getCell (row  - 1) (col - 1) m
+          uc = getCell (row - 1) col m
+          bases = (seq1 !! row, seq2 !! col)
+
+getResultChain :: Matrix -> String -> String -> [ResultCell]
+getResultChain m seq1 seq2
+    | otherwise = resultChain -- TODO create alignment from matrix
+    where maxScoreCellCoordinates = getMaxScoreCellCoordinates [] m
+          maxRow = fst maxScoreCellCoordinates
+          maxCol = snd maxScoreCellCoordinates
+          resultChain = _getChain [] maxRow maxCol m seq1 seq2
+
+alignPair :: ResultCell -> String
+alignPair rc
+    | cellType == 'd' = [fst bases, snd bases]
+    | cellType == '|' = ['_', snd bases]
+    | cellType == '-' = [fst bases, '_']
+    | otherwise = error "alignPair: bad cellType"
+    where bases = snd rc
+          cell = fst rc
+          cellType = fst cell
+
+_getAlignment :: [String] -> [ResultCell] -> [String]
+_getAlignment res [x] = 
+    let alignment = alignPair x
+    in [(res !! 0) ++ [alignment !! 0], (res !! 1) ++ [alignment !! 1]]
+_getAlignment res (a:as) =
+    let alignment = alignPair a
+        newResult = [(res !! 0) ++ [alignment !! 0], (res !! 1) ++ [alignment !! 1]]
+    in _getAlignment newResult as
+
+getAlignment :: [ResultCell] -> [String]
+getAlignment rc = _getAlignment ["", ""] rc
 
 scoreCell :: Matrix -> String -> String -> Int -> Int -> Cell
 scoreCell m seq1 seq2 i j
@@ -90,7 +158,7 @@ matchScore b1 b2
     | otherwise = -1
 
 smithWaterman :: String -> String -> [String]
-smithWaterman seq1 seq2 = getResult (mapMatrix seq1 seq2 (emptyMatrix (length seq1) (length seq2))) seq1 seq2
+smithWaterman seq1 seq2 = getAlignment $ getResultChain (mapMatrix seq1 seq2 (emptyMatrix (length seq1) (length seq2))) seq1 seq2
 
 
 -- Main function
