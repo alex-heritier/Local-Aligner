@@ -150,11 +150,11 @@ scoreCell m seq1 seq2 i j
           b2 = seq2 !! j -- sequence 2 base
 
 gapPenalty :: Int
-gapPenalty = -2
+gapPenalty = -1
 
 matchScore :: Char -> Char -> Int
 matchScore b1 b2
-    | b1 == b2 = 1
+    | b1 == b2 = 2
     | otherwise = -1
 
 smithWaterman :: String -> String -> [String]
