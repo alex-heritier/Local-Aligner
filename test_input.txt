@@ -1,0 +1,4 @@
+>test organism 1
+aaaatcgcctatagggatagta
+>test organism 2
+atttttcggcgtatatcagtgt
