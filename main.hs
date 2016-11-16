@@ -34,51 +34,52 @@ setCell row col val [(a:as)]
     | row == 0 = [_setCellInRow col val (a:as)]
     | otherwise = [(a:as)]
 setCell row col val ((a:as) : (b:bs))
-    | row < 0 || col < 0 = ((a:as) : (b:bs))
+    | row < 0 = ((a:as) : (b:bs))
     | row == 0 = newRow:(b:bs)
     | otherwise = (a:as):(setCell (row - 1) col val (b:bs))
     where newRow = _setCellInRow col val (a:as)
 
 getCell :: Int -> Int -> Matrix -> Cell
 getCell row col m
-    | row < 0 || col < 0 = trace ("\nGET CELL\ti: " ++ show row ++ "\tj: " ++ show col) emptyCell
+    | row < 0 || col < 0 = emptyCell
     | row == length m || col == length (head m) = error "getCell: Index out of bounds"
     | otherwise = (m !! row) !! col
 
 
 -- Algorithm
 type ScoringData = (Cell, Cell, Cell, Char, Char)
-mapInd :: Int -> Int -> (a -> Int -> b) -> [a] -> [b]
-mapInd rows cols f m = zipWith f m [0..]
 
-mapIndInner :: (Int -> Int -> b) -> [a] -> Int -> [b]
-mapIndInner f m index = zipWith f (cycle [index]) [0..(length m)-1]
+_mapMatrix :: Int -> Int -> String -> String -> Matrix -> Matrix
+_mapMatrix rows cols seq1 seq2 m
+    | rows == length m = m -- base case
+    | cols == (length $ head m) = _mapMatrix (rows + 1) 0 seq1 seq2 m -- move to next row, no changes
+    | otherwise = _mapMatrix rows (cols + 1) seq1 seq2 newMatrix
+    where newMatrix = setCell rows cols newCell m
+          newCell = scoreCell m seq1 seq2 rows cols
 
-_mapMatrix :: Int -> Int -> (Matrix -> String -> String -> Int -> Int -> Cell) -> String -> String -> Matrix -> Matrix
-_mapMatrix rows cols f s1 s2 m = mapInd rows cols (mapIndInner $ scoreCell m s1 s2) m
-
-mapMatrix :: (Matrix -> String -> String -> Int -> Int -> Cell) -> String -> String -> Matrix -> Matrix
-mapMatrix f s1 s2 m = _mapMatrix (length m) (length $ head m) f s1 s2 m
+mapMatrix :: String -> String -> Matrix -> Matrix
+mapMatrix s1 s2 m = _mapMatrix 0 0 s1 s2 m
 
 getResult :: Matrix -> String -> String -> [String]
 getResult m seq1 seq2 = [seq1, seq2]
 
 scoreCell :: Matrix -> String -> String -> Int -> Int -> Cell
-scoreCell m s1 s2 i j
+scoreCell m seq1 seq2 i j
     | match > delete && match > insert = (diagonalCell match)
     | delete > match && delete > insert = (upCell delete)
     | insert > match && insert > delete = (leftCell insert)
-    where lc = getCell i (j - 1) m -- left cell score
-          dc = getCell (i - 1) (j - 1) m -- diagonal cell score
-          uc = getCell (i - 1) j m -- up cell score
+    | otherwise = (diagonalCell match)
+    where lc = getCell i (j - 1) m -- left cell 
+          dc = getCell (i - 1) (j - 1) m -- diagonal cell 
+          uc = getCell (i - 1) j m -- up cell 
           lcScore = snd lc
           dcScore = snd dc
           ucScore = snd uc
           match = dcScore + (matchScore b1 b2)
           delete = ucScore + gapPenalty
           insert = lcScore + gapPenalty
-          b1 = s1 !! trace ("\nSCORE CELL\ti: " ++ show i ++ "\tj: " ++ show j) i -- sequence 1 base
-          b2 = s2 !! j -- sequence 2 base
+          b1 = seq1 !! i -- sequence 1 base
+          b2 = seq2 !! j -- sequence 2 base
 
 gapPenalty :: Int
 gapPenalty = -2
@@ -89,7 +90,7 @@ matchScore b1 b2
     | otherwise = -1
 
 smithWaterman :: String -> String -> [String]
-smithWaterman seq1 seq2 = getResult (mapMatrix scoreCell seq1 seq2 (emptyMatrix (length seq1) (length seq2))) seq1 seq2
+smithWaterman seq1 seq2 = getResult (mapMatrix seq1 seq2 (emptyMatrix (length seq1) (length seq2))) seq1 seq2
 
 
 -- Main function
