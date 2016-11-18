@@ -1,1 +1,4 @@
 input.txt
+*.doc*
+main
+parallel_main

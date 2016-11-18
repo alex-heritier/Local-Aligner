@@ -1,4 +1,20 @@
+-- Authors: Alex Heritier, Wilson Loi
+-- Date: 11/10/17
+--
+-- This program is an implementation of the Smith-Waterman local
+-- alignment algorithm in Haskell.
+-- 
+-- To run this program, you first need the Glasgow Haskell
+-- Compiler (ghc), found here https://www.haskell.org/ghc/.
+-- Once installed, run "ghc parallel_main.hs" to compile the
+-- program and then run "./parallel_main <input file>" with
+-- <input file> being a fasta file with 4 lines. The first and 
+-- third lines must be description lines while the second and
+-- fourth lines must be the sequences that will be compared.
+
+
 import System.IO
+import System.Environment
 import Debug.Trace
 
 
@@ -141,7 +157,7 @@ scoreCell m seq1 seq2 i j
           b2 = seq2 !! j -- sequence 2 base
 
 gapPenalty :: Int -- the gap penalty
-gapPenalty = -2
+gapPenalty = -1
 
 matchScore :: Char -> Char -> Int -- the match/mismatch penalty
 matchScore b1 b2
@@ -153,7 +169,8 @@ smithWaterman seq1 seq2 = getAlignment $ getResultChain (mapMatrix seq1 seq2 (em
 
 
 -- Main function
-main = do fromHandle <- openFile "test_input.txt" ReadMode
+main = do args <- getArgs
+          fromHandle <- openFile (if (length args == 1) then (args !! 0) else (error "usage: ghci parallel_main.hs <input file>")) ReadMode
           contents   <- hGetContents fromHandle
           let [header1, seq1, header2, seq2] = lines contents
           let result = smithWaterman seq1 seq2
