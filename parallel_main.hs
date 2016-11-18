@@ -1,6 +1,6 @@
 import System.IO
 import Debug.Trace
-
+import Control.Parallel
 
 -- Cell data
 type Cell = (Char, Int) -- represents a single Cell in the Matrix
@@ -87,17 +87,17 @@ _getResultChain res row col m seq1 seq2
     | direction == '|' = _getResultChain ((currentCell, bases):res) (row - 1) col m seq1 seq2
     | otherwise = error "_getResultChain: Bad direction"
     where direction = fst currentCell
-          currentCell = getCell row col m
-          lc = getCell row (col - 1) m
-          dc = getCell (row  - 1) (col - 1) m
-          uc = getCell (row - 1) col m
+          currentCell = par 0 $ getCell row col m
+          lc = par 0 $ getCell row (col - 1) m
+          dc = par 0 $ getCell (row  - 1) (col - 1) m
+          uc = par 0 $ getCell (row - 1) col m
           bases = (seq1 !! row, seq2 !! col)
 
 getResultChain :: Matrix -> String -> String -> [ResultCell] -- get the Cell chain starting from the highest scoring Cell to a border Cell
 getResultChain m seq1 seq2 =
     let maxScoreCellCoordinates = getMaxScoreCellCoordinates [] m
-        maxRow = fst maxScoreCellCoordinates
-        maxCol = snd maxScoreCellCoordinates
+        maxRow = par 0 $ fst maxScoreCellCoordinates
+        maxCol = par 0 $ snd maxScoreCellCoordinates
     in _getResultChain [] maxRow maxCol m seq1 seq2
 
 alignPair :: ResultCell -> String -- do an alignment for a single pair of bases based off the ResultCell data
@@ -106,17 +106,21 @@ alignPair rc
     | cellType == '|' = ['_', snd bases]
     | cellType == '-' = [fst bases, '_']
     | otherwise = error "alignPair: bad cellType"
-    where bases = snd rc
-          cell = fst rc
+    where bases = par 0 $ snd rc
+          cell = par 0 $ fst rc
           cellType = fst cell
 
 _getAlignment :: [String] -> [ResultCell] -> [String]
 _getAlignment res [x] = 
     let alignment = alignPair x
-    in [(res !! 0) ++ [alignment !! 0], (res !! 1) ++ [alignment !! 1]]
+        str1 = par 0 $ (res !! 0) ++ [alignment !! 0]
+        str2 = par 0 $ (res !! 1) ++ [alignment !! 1]
+    in [str1, str2]
 _getAlignment res (a:as) =
     let alignment = alignPair a
-        newResult = [(res !! 0) ++ [alignment !! 0], (res !! 1) ++ [alignment !! 1]]
+        str1 = par 0 $ (res !! 0) ++ [alignment !! 0]
+        str2 = par 0 $ (res !! 1) ++ [alignment !! 1]
+        newResult = [str1, str2]
     in _getAlignment newResult as
 
 getAlignment :: [ResultCell] -> [String] -- create the alignment from a result Cell chain
@@ -128,20 +132,20 @@ scoreCell m seq1 seq2 i j
     | delete > match && delete > insert = (upCell delete)
     | insert > match && insert > delete = (leftCell insert)
     | otherwise = (diagonalCell match)
-    where lc = getCell i (j - 1) m -- left cell 
-          dc = getCell (i - 1) (j - 1) m -- diagonal cell 
-          uc = getCell (i - 1) j m -- up cell 
-          lcScore = snd lc
-          dcScore = snd dc
-          ucScore = snd uc
-          match = dcScore + (matchScore b1 b2)
-          delete = ucScore + gapPenalty
-          insert = lcScore + gapPenalty
-          b1 = seq1 !! i -- sequence 1 base
-          b2 = seq2 !! j -- sequence 2 base
+    where lc = par 0 $ getCell i (j - 1) m -- left cell 
+          dc = par 0 $ getCell (i - 1) (j - 1) m -- diagonal cell 
+          uc = par 0 $ getCell (i - 1) j m -- up cell 
+          lcScore = par 0 $ snd lc
+          dcScore = par 0 $ snd dc
+          ucScore = par 0 $ snd uc
+          match = par 0 $ (dcScore + (matchScore b1 b2))
+          delete = par 0 $ (ucScore + gapPenalty)
+          insert = par 0 $ (lcScore + gapPenalty)
+          b1 = par 0 $ seq1 !! i -- sequence 1 base
+          b2 = par 0 $ seq2 !! j -- sequence 2 base
 
 gapPenalty :: Int -- the gap penalty
-gapPenalty = -2
+gapPenalty = -1
 
 matchScore :: Char -> Char -> Int -- the match/mismatch penalty
 matchScore b1 b2
@@ -163,3 +167,4 @@ main = do fromHandle <- openFile "test_input.txt" ReadMode
           putStrLn ""
           putStrLn (result !! 0)
           putStrLn (result !! 1)
+
