@@ -1,14 +1,14 @@
 -- Authors: Alex Heritier, Wilson Loi
--- Date: 11/10/17
+-- Date: 11/10/16
 --
 -- This program is an implementation of the Smith-Waterman local
 -- alignment algorithm in Haskell.
--- 
+--
 -- To run this program, you first need the Glasgow Haskell
 -- Compiler (ghc), found here https://www.haskell.org/ghc/.
 -- Once installed, run "ghc parallel_main.hs" to compile the
 -- program and then run "./parallel_main <input file>" with
--- <input file> being a fasta file with 4 lines. The first and 
+-- <input file> being a fasta file with 4 lines. The first and
 -- third lines must be description lines while the second and
 -- fourth lines must be the sequences that will be compared.
 
@@ -88,7 +88,7 @@ getMaxCellInList :: [Cell] -> Cell -- get the highest score in the Matrix
 getMaxCellInList list = foldr (\x y -> if ((snd x) > (snd y)) then (x) else (y)) (('_', -100)) list
 
 getMaxScoreCellCoordinates :: [Coordinate] -> Matrix -> Coordinate -- get the coordinates for the Cell with the highest score
-getMaxScoreCellCoordinates res m = 
+getMaxScoreCellCoordinates res m =
     let getMaxScoreCell = getMaxCellInList (map getMaxCellInList m)
     in findCellCoordinates 0 0 (snd getMaxScoreCell) m
 
@@ -127,7 +127,7 @@ alignPair rc
           cellType = fst cell
 
 _getAlignment :: [String] -> [ResultCell] -> [String]
-_getAlignment res [x] = 
+_getAlignment res [x] =
     let alignment = alignPair x
     in [(res !! 0) ++ [alignment !! 0], (res !! 1) ++ [alignment !! 1]]
 _getAlignment res (a:as) =
@@ -144,9 +144,9 @@ scoreCell m seq1 seq2 i j
     | delete > match && delete > insert = (upCell delete)
     | insert > match && insert > delete = (leftCell insert)
     | otherwise = (diagonalCell match)
-    where lc = getCell i (j - 1) m -- left cell 
-          dc = getCell (i - 1) (j - 1) m -- diagonal cell 
-          uc = getCell (i - 1) j m -- up cell 
+    where lc = getCell i (j - 1) m -- left cell
+          dc = getCell (i - 1) (j - 1) m -- diagonal cell
+          uc = getCell (i - 1) j m -- up cell
           lcScore = snd lc
           dcScore = snd dc
           ucScore = snd uc

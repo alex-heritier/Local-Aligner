@@ -1,15 +1,15 @@
 -- Authors: Alex Heritier, Wilson Loi
--- Date: 11/10/17
+-- Date: 11/10/16
 --
 -- This program is an implementation of the Smith-Waterman local
 -- alignment algorithm in Haskell. This version adds some "par"
 -- calls to parallelize the code and hopefully decrease run time.
--- 
+--
 -- To run this program, you first need the Glasgow Haskell
 -- Compiler (ghc), found here https://www.haskell.org/ghc/.
 -- Once installed, run "ghc parallel_main.hs" to compile the
 -- program and then run "./parallel_main <input file>" with
--- <input file> being a fasta file with 4 lines. The first and 
+-- <input file> being a fasta file with 4 lines. The first and
 -- third lines must be description lines while the second and
 -- fourth lines must be the sequences that will be compared.
 
@@ -89,7 +89,7 @@ getMaxCellInList :: [Cell] -> Cell -- get the highest score in the Matrix
 getMaxCellInList list = foldr (\x y -> if ((snd x) > (snd y)) then (x) else (y)) (('_', -100)) list
 
 getMaxScoreCellCoordinates :: [Coordinate] -> Matrix -> Coordinate -- get the coordinates for the Cell with the highest score
-getMaxScoreCellCoordinates res m = 
+getMaxScoreCellCoordinates res m =
     let getMaxScoreCell = getMaxCellInList (map getMaxCellInList m)
     in findCellCoordinates 0 0 (snd getMaxScoreCell) m
 
@@ -128,7 +128,7 @@ alignPair rc
           cellType = fst cell
 
 _getAlignment :: [String] -> [ResultCell] -> [String]
-_getAlignment res [x] = 
+_getAlignment res [x] =
     let alignment = alignPair x
         str1 = par 0 $ (res !! 0) ++ [alignment !! 0]
         str2 = par 0 $ (res !! 1) ++ [alignment !! 1]
@@ -149,9 +149,9 @@ scoreCell m seq1 seq2 i j
     | delete > match && delete > insert = (upCell delete)
     | insert > match && insert > delete = (leftCell insert)
     | otherwise = (diagonalCell match)
-    where lc = par 0 $ getCell i (j - 1) m -- left cell 
-          dc = par 0 $ getCell (i - 1) (j - 1) m -- diagonal cell 
-          uc = par 0 $ getCell (i - 1) j m -- up cell 
+    where lc = par 0 $ getCell i (j - 1) m -- left cell
+          dc = par 0 $ getCell (i - 1) (j - 1) m -- diagonal cell
+          uc = par 0 $ getCell (i - 1) j m -- up cell
           lcScore = par 0 $ snd lc
           dcScore = par 0 $ snd dc
           ucScore = par 0 $ snd uc
